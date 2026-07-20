@@ -65,3 +65,7 @@
 [submodule "scripts/etiss_perfsim_testing"]
 	path = scripts/etiss_perfsim_testing
 	url = git@github.com:danielschloms/rvv_testing.git
+[submodule "benchmark_sources/generic_iree/iree/iree-source"]
+	path = benchmark_sources/generic_iree/iree/iree-source
+	url = https://github.com/efectn-forks/iree.git
+	branch = rv32-fixes

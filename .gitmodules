@@ -61,5 +61,4 @@
 	url = https://github.com/embench/embench-iot.git
 [submodule "benchmark_sources/generic_iree/iree/iree-source"]
 	path = benchmark_sources/generic_iree/iree/iree-source
-	url = https://github.com/efectn-forks/iree.git
-	branch = rv32-fixes
+	url = https://github.com/iree-org/iree.git

@@ -1,17 +1,18 @@
 # Add test addition macros
 include(${CMAKE_CURRENT_SOURCE_DIR}/CMake/add_test.cmake)
 
-
-
-
 ###########
 # Add tests for the benchmark suite
 ###########
 
-
-
 #Set location for build binaries
 set(BINARY_DIR ${BUILD_DIR}/benchmark_sources/MLPerfTiny/)
+
+if(NOT DEFINED FRAMEWORK OR FRAMEWORK STREQUAL "")
+    set(FRAMEWORK "TFLM")
+endif()
+
+message(STATUS "MLPerfTiny framework selection: ${FRAMEWORK}")
 
 if(${FRAMEWORK} STREQUAL "TFLM")
     #Needed to run TensorFlow code with RISC-V toolchain.  These flags need to be defined at this level and at tflm library level TODO: investigate
@@ -42,7 +43,16 @@ if(${FRAMEWORK} STREQUAL "TFLM")
     	add_Benchmark_Spike(toycar_int8 ${CMAKE_CURRENT_SOURCE_DIR}/Int8/toycar/ ${BINARY_DIR})
     endif()
 elseif(${FRAMEWORK} STREQUAL "IREE")
-    message(FATAL_ERROR "WORK IN PROGRESS")
+    # Use generic_iree's IREE build instead of a duplicate folder
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../generic_iree/iree ${CMAKE_BINARY_DIR}/iree)
+    
+    # IREE runtime hedefinün bulunduğunu kontrol et
+    if(TARGET iree::runtime::unified)
+        message(STATUS "Building MLPerfTiny with IREE backend")
+        add_Benchmark_IREE_Spike(toycar_int8 ${CMAKE_CURRENT_SOURCE_DIR}/Int8/toycar/ ${BINARY_DIR})
+    else()
+        message(WARNING "IREE runtime target not available, skipping IREE benchmarks")
+    endif()
 else()
     message(FATAL_ERROR "UNSUPPORTED DEPLOYMENT FRAMEWORK SELECTED.  SELECT A FRAMEWORK WITH -DFRAMEWORK=(TFLM/IREE)")
 endif()

@@ -6,6 +6,14 @@
 
 
 #include <cstdint>
+
+extern "C" {
+void _exit(int status) {
+    volatile char* exit_port = (volatile char*)0x00000408;
+    *exit_port = (char)status;
+}
+}
+
 class Simulator
 {
     private:

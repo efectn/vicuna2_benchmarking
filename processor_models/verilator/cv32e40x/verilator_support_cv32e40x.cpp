@@ -118,16 +118,16 @@ void update_mem_load(uint32_t address, bool req_valid, uint32_t mem_w, uint32_t 
         queue_data[0][i] = 0;
     }
     
-    if (valid)
+    if (req_valid)
     {
         //Copy each valid byte into buffer
         for (int i = 0; i < mem_w/8; i++) {
             queue_data[0][i] |= mem[address_mask+i];
         }
     }
-    
-    queue_valid[0] = valid;
-    queue_err[0]   = !valid;
+
+    queue_err[0] = !valid;
+    queue_valid[0] = req_valid;
 }
 
 /*
@@ -137,10 +137,14 @@ void update_mem_load(uint32_t address, bool req_valid, uint32_t mem_w, uint32_t 
 *   address        - address of the write request being issued
 *   req_valid      - validity of the write request being issued
 *   mem_w          - width of the write interface in bits
+*   mem_lat        - latency of the memory interface
 *   mem_size       - total size of the memory address space
 *
 *   *model_data_o  - pointer to memory data write interface on verilator model
 *   *model_be_o    - pointer to byte enable write interface on verilator model
+*
+*   *queue_valid   - pointer to valid queue
+*   *queue_err     - pointer to error queue
 *
 *   *mem           - pointer to memory space
 */
@@ -149,18 +153,20 @@ void update_mem_write(uint32_t address, bool req_valid, uint32_t mem_w, uint32_t
     if (req_valid) {
         if (address_mask < mem_size)
         {
+            uint32_t aligned_addr = address & ~0x3;
+            // Handle write
             for (int i = 0; i < mem_w / 8; i++) {
                 if ((model_be_o[i/8] & (1<<(i%8)))) {
                     mem[address_mask+i] = model_data_o[i];
                 }
             }
-        } 
+        }
         else
         {
-            fprintf(stderr, "ERROR: WRITE ATTEMPTED OUTSIDE OF VALID ADDRESS SPACE\n");
+            fprintf(stderr, "ERROR: WRITE ATTEMPTED OUTSIDE OF VALID ADDRESS SPACE: 0x%08x\n", address);
         }
-        queue_valid[mem_lat-1] = true; //need to signal valid on store interface for accepted transaction.  Can always respond in 1 cycle due to store buffer
-        queue_err[mem_lat-1] = false;
+        queue_valid[mem_lat-1] = true;
+        queue_err[mem_lat-1] = !valid;
     }
 }
 

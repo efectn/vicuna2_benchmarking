@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <errno.h>
+#include <stdlib.h>
 #include "Vvproc_top.h"
 
 #include "verilator_support_cv32e40x.h"

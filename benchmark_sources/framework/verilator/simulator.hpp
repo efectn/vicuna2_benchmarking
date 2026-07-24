@@ -48,14 +48,9 @@ class Simulator
     };
 
     //Termination success or failure function for this simulator
-    void terminate(int code) // TODO: Int return codes
+    void terminate(int code)
     {
-        if (code == 0)
-        {
-            *terminate_addr = 0x0; //Write 0x0 to signal success
-        } else {
-            *terminate_addr = 0xf; //Write 0xF to signal success
-        }
+        *terminate_addr = code;
     };
 
     //Cleanup any allocatations

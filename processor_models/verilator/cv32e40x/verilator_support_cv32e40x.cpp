@@ -166,8 +166,7 @@ void update_mem_write(uint32_t address, bool req_valid, uint32_t mem_w, uint32_t
                 }
             }
         }
-        else
-        {
+        else {
             fprintf(stderr, "ERROR: WRITE ATTEMPTED OUTSIDE OF VALID ADDRESS SPACE: 0x%08x\n", address);
         }
         queue_valid[mem_lat-1] = req_valid;
@@ -471,7 +470,10 @@ void update_vreg_commit(Vvproc_top *top, int vreg_w, FILE *commit_log){
         //write commit log for vregs.  Currently set up for one write port.  Only log a commit when an element is actually written. Mask handled internally in case entire write is masked out
         if(top->vproc_top->v_core->vregfile_wr_en_q)
         {
-            fprintf(commit_log, "v%d 0x", top->vproc_top->v_core->vregfile_wr_addr_q);
+            fprintf(commit_log, "pc 0x%08x inst 0x%08x v%d 0x",
+                    top->vproc_top->core->instruction_wb_pc,
+                    top->vproc_top->core->instruction_wb,
+                    top->vproc_top->v_core->vregfile_wr_addr_q);
             unsigned char* reg_write_data = (unsigned char*)&(top->vproc_top->v_core->vregfile_wr_data_q);
             //bytes written out in this order to match the outputs from spike
             for (int i = vreg_w/8-1; i >= 0; i--)

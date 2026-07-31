@@ -125,17 +125,22 @@ int main(int argc, char **argv) {
     //TODO: Log commits based on paths for cv32e40x
     //////////////////////////
     FILE *fxreglog = NULL;
+    FILE *fvreglog = NULL;
     /*Log File for Scalar Registers*/
     if (argc >= 12){
         if((strcmp(argv[10], "--commit") == 0)) {
-            std::string filename=(std::string(argv[11])+std::string(argv[7])+std::string("_xreg_commits_verilator.txt"));
-            fxreglog = fopen(filename.c_str(), "w");
+            std::string xfilename=(std::string(argv[11])+std::string(argv[7])+std::string("_xreg_commits_verilator.txt"));
+            std::string vfilename=(std::string(argv[11])+std::string(argv[7])+std::string("_vreg_commits_verilator.txt"));
+            fxreglog = fopen(xfilename.c_str(), "w");
+            fvreglog = fopen(vfilename.c_str(), "w");
         }
     } 
     if (argc >= 14){
         if((strcmp(argv[12], "--commit") == 0)) {
-            std::string filename=(std::string(argv[13])+std::string(argv[7])+std::string("_xreg_commits_verilator.txt"));
-            fxreglog = fopen(filename.c_str(), "w");
+            std::string xfilename=(std::string(argv[13])+std::string(argv[7])+std::string("_xreg_commits_verilator.txt"));
+            std::string vfilename=(std::string(argv[13])+std::string(argv[7])+std::string("_vreg_commits_verilator.txt"));
+            fxreglog = fopen(xfilename.c_str(), "w");
+            fvreglog = fopen(vfilename.c_str(), "w");
         }
     }
 
@@ -220,6 +225,9 @@ int main(int argc, char **argv) {
     int v_test_failure = 0;
     
 
+    uint32_t pc_history[16] = {0};
+    int pc_idx = 0;
+
     //////////////////////////
     //Program Execution - Infinite loop with defined exit conditions
     //////////////////////////
@@ -249,8 +257,12 @@ int main(int argc, char **argv) {
 		update_mem_load(top->mem_iaddr_o, top->mem_ireq_o, mem_w, mem_latency, mem_sz, (unsigned char*)&(top->mem_irdata_i), (bool*)&(top->mem_irvalid_i), (bool*)&(top->mem_ierr_i), mem_idata_queue, mem_ivalid_queue, mem_ierr_queue, mem);
 
 
+        pc_history[pc_idx] = top->vproc_top->core->pc_if;
+        pc_idx = (pc_idx + 1) % 16;
+
         top->eval();
         update_stats(top);
+        // fprintf(stderr, "CYCLE: pc_if = 0x%08X\n", top->vproc_top->core->pc_if);
         update_vcd(tfp, cycles_begin_trace, cycles_end_trace);
 
 
@@ -303,12 +315,25 @@ int main(int argc, char **argv) {
 
         //A jump to address 0x70 is a failed test caused by an interrupt being called (all other interrupts also funnel here)
         if (check_PC(top, 0x000000070u) ) {
+            fprintf(stderr, "PC HISTORY:\n");
+            for (int i = 0; i < 16; i++) {
+                fprintf(stderr, "  0x%08X\n", pc_history[(pc_idx + i) % 16]);
+            }
             fprintf(stderr, "ERROR: TEST FAILURE - Interrupt Called\n");
             exit_code = 1;
             break;
         }
 
-        if (check_stall(top, 1000)){
+        if (check_stall(top, 100000)){
+            uint32_t pc = top->vproc_top->core->pc_if;
+            uint32_t addr = pc & 0x7FFFFFFF;
+            fprintf(stderr, "ERROR: SIMULATION STALLED FOR 100000 CYCLES AT IF_PC = 0x%08X\n", pc);
+            if (addr >= 16 && addr < mem_sz - 16) {
+                fprintf(stderr, "MEM AROUND PC:\n");
+                for (int i = -16; i < 16; i += 4) {
+                    fprintf(stderr, "0x%08X: %02X %02X %02X %02X\n", pc + i, mem[addr+i+3], mem[addr+i+2], mem[addr+i+1], mem[addr+i]);
+                }
+            }
             exit_code = 1;
             break;
         }
@@ -320,10 +345,12 @@ int main(int argc, char **argv) {
         if (fxreglog != NULL) {
             update_xreg_commit(top, fxreglog);
         }
-
+        
+        if (fvreglog != NULL) {
+            update_vreg_commit(top, vreg_w, fvreglog);
+        }
         // update_freg_commit(top, ffreglog);
-        // update_vreg_commit(top, vreg_w, fvreglog); 
-
+        
     }
 
 
@@ -365,7 +392,10 @@ int main(int argc, char **argv) {
     {
         fclose(fxreglog);
     }
-    // fclose(fvreglog);
+    if (fvreglog != NULL)
+    {
+        fclose(fvreglog);
+    }
     // fclose(ffreglog);
 
     return exit_code;

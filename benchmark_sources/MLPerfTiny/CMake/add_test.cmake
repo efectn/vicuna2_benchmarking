@@ -52,8 +52,8 @@ macro(add_Benchmark TEST SOURCE_DIR TEST_BUILD_DIR)
                        COMMAND readelf -s ${TEST_NAME}.elf | sed '2,13 s/ //1' | grep vref_start | cut -d " " -f 6 | tr [=["\n"]=] " " >> prog_${TEST_NAME}.txt
                        COMMAND readelf -s ${TEST_NAME}.elf | sed '2,13 s/ //1' | grep vref_end | cut -d " " -f 6 | tr [=["\n"]=] " " >> prog_${TEST_NAME}.txt
                        COMMAND echo -n "${TEST_BUILD_DIR}/${TEST_NAME}_vicuna_sim_out.txt " >> prog_${TEST_NAME}.txt
-                       COMMAND readelf -s ${TEST_NAME}.elf | sed 's/^ *//' | grep vdata_start | cut -d " " -f 2 | tr [=["\n"]=] " " >> prog_${TEST_NAME}.txt
-                       COMMAND readelf -s ${TEST_NAME}.elf | sed 's/^ *//' | grep vdata_end | cut -d " " -f 2 | tr [=["\n"]=] " " >> prog_${TEST_NAME}.txt
+                       COMMAND readelf -s ${TEST_NAME}.elf | sed '2,13 s/ //1' | grep vdata_start | cut -d " " -f 6 | tr [=["\n"]=] " " >> prog_${TEST_NAME}.txt
+                       COMMAND readelf -s ${TEST_NAME}.elf | sed '2,13 s/ //1' | grep vdata_end | cut -d " " -f 6 | tr [=["\n"]=] " " >> prog_${TEST_NAME}.txt
                        COMMAND ${CMAKE_OBJDUMP} -D ${TEST_NAME}.elf > ${TEST_NAME}_dump.txt
                        )
     #VERY DANGEROUS TO USE TRACE

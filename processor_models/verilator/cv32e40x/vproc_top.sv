@@ -826,7 +826,7 @@ module vproc_top import vproc_pkg::*, obi_pkg::*; #(
     logic                sdata_waiting;
     logic                vdata_waiting;
     logic [31:0]         sdata_wait_addr;
-    assign sdata_hold = ~USE_XIF_MEM & (vdata_req | (vect_pending_load & sdata_we));
+    assign sdata_hold = ~USE_XIF_MEM & (vdata_req[0] | (vect_pending_load & sdata_we));
     always_comb begin
         data_req[0]   = vdata_req[0] | (sdata_req & ~sdata_hold);
         data_addr[0]  = sdata_addr;
@@ -923,9 +923,9 @@ module vproc_top import vproc_pkg::*, obi_pkg::*; #(
     assign sdata_rvalid = sdata_waiting & data_rvalid[0];
     assign sdata_err    = data_err[0];
     
-    
     assign vdata_rvalid[0] = vdata_waiting & data_rvalid[0];
     assign vdata_err[0]    = data_err[0];
+
     for(genvar i = 1; i < MEM_PORTS; i++) begin
         assign vdata_rvalid[i] = data_rvalid[i];
         assign vdata_err[i]    = data_err[i];
@@ -1072,6 +1072,32 @@ module vproc_top import vproc_pkg::*, obi_pkg::*; #(
     
     assign mem_aid_o   = dmem_aid;
     assign dmem_rid    = mem_rid_i;
+
+`ifndef SYNTHESIS
+    logic [7:0] stall_dbg_count_q;
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (~rst_ni) begin
+            stall_dbg_count_q <= '0;
+        end else if (
+            (instr_addr >= 32'h8024c1d8) && (instr_addr <= 32'h8024c200) &&
+            (stall_dbg_count_q != 8'd96)
+        ) begin
+            stall_dbg_count_q <= stall_dbg_count_q + 8'd1;
+            $display("[cv32 stall dbg] pc=%08x ireq=%0d ignt=%0d irvalid=%0d irdata=%08x dreq=%0d dgnt=%0d drvalid=%0d if_v=%0d id_v=%0d ex_v=%0d wb_v=%0d id_r=%0d ex_r=%0d wb_r=%0d hif=%0d hid=%0d hex=%0d hwb=%0d kif=%0d kid=%0d kex=%0d kwb=%0d issue_v=%0d issue_r=%0d issue_id=%0d accept=%0d wb=%0d commit_v=%0d commit_id=%0d kill=%0d host_rv=%0d host_rr=%0d host_rid=%0d host_rwe=%0d host_rdata=%08x vcore_rv=%0d vcore_rr=%0d vcore_rid=%0d vcore_rwe=%0d",
+                     instr_addr, instr_req, instr_gnt, instr_rvalid, instr_rdata,
+                     sdata_req, sdata_gnt, sdata_rvalid,
+                     core.if_valid, core.id_valid, core.ex_valid, core.wb_valid,
+                     core.id_ready, core.ex_ready, core.wb_ready,
+                     core.ctrl_fsm.halt_if, core.ctrl_fsm.halt_id, core.ctrl_fsm.halt_ex, core.ctrl_fsm.halt_wb,
+                     core.ctrl_fsm.kill_if, core.ctrl_fsm.kill_id, core.ctrl_fsm.kill_ex, core.ctrl_fsm.kill_wb,
+                     host_xif.issue_valid, host_xif.issue_ready, host_xif.issue_req.id,
+                     host_xif.issue_resp.accept, host_xif.issue_resp.writeback,
+                     host_xif.commit_valid, host_xif.commit.id, host_xif.commit.commit_kill,
+                     host_xif.result_valid, host_xif.result_ready, host_xif.result.id, host_xif.result.we, host_xif.result.data,
+                     vcore_xif.result_valid, vcore_xif.result_ready, vcore_xif.result.id, vcore_xif.result.we);
+        end
+    end
+`endif
 
 
 

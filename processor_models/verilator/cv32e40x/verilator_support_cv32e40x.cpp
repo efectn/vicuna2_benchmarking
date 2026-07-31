@@ -112,6 +112,9 @@ void update_mem_load(uint32_t address, bool req_valid, uint32_t mem_w, uint32_t 
 
     //Next evaluate an outstanding request and put at the end of the buffer.
     bool valid = (address_mask < mem_size) & req_valid;
+    if (req_valid && !valid) {
+        fprintf(stderr, "ERROR: READ ATTEMPTED OUTSIDE OF VALID ADDRESS SPACE: 0x%08x\n", address);
+    }
 
     //set new queue entry to zero
     for (int i = 0; i < mem_w/8; i++)
@@ -152,9 +155,10 @@ void update_mem_load(uint32_t address, bool req_valid, uint32_t mem_w, uint32_t 
 void update_mem_write(uint32_t address, bool req_valid, uint32_t mem_w, uint32_t mem_lat, uint32_t mem_size, unsigned char *model_data_o, unsigned char *model_be_o, bool *queue_valid, bool *queue_err, unsigned char *mem){
 
     uint32_t address_mask = address & 0x7FFFFFFF;
+    bool valid = (address_mask < mem_size) & req_valid;
 
     if (req_valid) {
-        if (address_mask < mem_size)
+        if (valid)
         {
             uint32_t aligned_addr = address & ~0x3;
             // Handle write
@@ -164,12 +168,11 @@ void update_mem_write(uint32_t address, bool req_valid, uint32_t mem_w, uint32_t
                 }
             }
         }
-        else
-        {
+        else {
             fprintf(stderr, "ERROR: WRITE ATTEMPTED OUTSIDE OF VALID ADDRESS SPACE: 0x%08x\n", address);
         }
-        queue_valid[mem_lat-1] = true;
-        queue_err[mem_lat-1] = !valid;
+        queue_valid[mem_lat-1] = req_valid; 
+        queue_err[mem_lat-1]   = !valid;
     }
 }
 
@@ -469,7 +472,10 @@ void update_vreg_commit(Vvproc_top *top, int vreg_w, FILE *commit_log){
         //write commit log for vregs.  Currently set up for one write port.  Only log a commit when an element is actually written. Mask handled internally in case entire write is masked out
         if(top->vproc_top->v_core->vregfile_wr_en_q)
         {
-            fprintf(commit_log, "v%d 0x", top->vproc_top->v_core->vregfile_wr_addr_q);
+            fprintf(commit_log, "pc 0x%08x inst 0x%08x v%d 0x",
+                    top->vproc_top->core->instruction_wb_pc,
+                    top->vproc_top->core->instruction_wb,
+                    top->vproc_top->v_core->vregfile_wr_addr_q);
             unsigned char* reg_write_data = (unsigned char*)&(top->vproc_top->v_core->vregfile_wr_data_q);
             //bytes written out in this order to match the outputs from spike
             for (int i = vreg_w/8-1; i >= 0; i--)

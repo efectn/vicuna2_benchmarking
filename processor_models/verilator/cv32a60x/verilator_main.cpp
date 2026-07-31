@@ -515,8 +515,6 @@ int main(int argc, char **argv) {
         }
         free(vec_mem_rdata_queue[p]);
         free(vec_mem_meta_queue[p]);
-        free(vec_mem_rdata_queue[p]);
-        free(vec_mem_meta_queue[p]);
     }
     free(mem_rdata_queue);
     free(mem_idata_queue);

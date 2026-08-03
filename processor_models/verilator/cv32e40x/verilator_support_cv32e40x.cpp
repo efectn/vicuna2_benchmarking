@@ -111,6 +111,9 @@ void update_mem_load(uint32_t address, bool req_valid, uint32_t mem_w, uint32_t 
 
     //Next evaluate an outstanding request and put at the end of the buffer.
     bool valid = (address_mask < mem_size) & req_valid;
+    if (req_valid && !valid) {
+        fprintf(stderr, "ERROR: READ ATTEMPTED OUTSIDE OF VALID ADDRESS SPACE: 0x%08x\n", address);
+    }
 
     //set new queue entry to zero
     for (int i = 0; i < mem_w/8; i++)
@@ -150,8 +153,10 @@ void update_mem_load(uint32_t address, bool req_valid, uint32_t mem_w, uint32_t 
 */
 void update_mem_write(uint32_t address, bool req_valid, uint32_t mem_w, uint32_t mem_lat, uint32_t mem_size, unsigned char *model_data_o, unsigned char *model_be_o, bool *queue_valid, bool *queue_err, unsigned char *mem){
     uint32_t address_mask = address & 0x7FFFFFFF;
+    bool valid = (address_mask < mem_size) & req_valid;
+
     if (req_valid) {
-        if (address_mask < mem_size)
+        if (valid)
         {
             uint32_t aligned_addr = address & ~0x3;
             // Handle write
@@ -165,7 +170,7 @@ void update_mem_write(uint32_t address, bool req_valid, uint32_t mem_w, uint32_t
         {
             fprintf(stderr, "ERROR: WRITE ATTEMPTED OUTSIDE OF VALID ADDRESS SPACE: 0x%08x\n", address);
         }
-        queue_valid[mem_lat-1] = true;
+        queue_valid[mem_lat-1] = req_valid;
         queue_err[mem_lat-1] = !valid;
     }
 }
